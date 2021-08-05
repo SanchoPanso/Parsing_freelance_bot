@@ -2,13 +2,31 @@ import aiohttp
 import asyncio
 import lxml
 from bs4 import BeautifulSoup
+import time
+import datetime
 # https://www.fl.ru/projects/?page=2&kind=1
 
 fl_ru_host = "https://www.fl.ru"
 fl_ru_projects_url = "https://www.fl.ru/projects/"
 
 
-async def parse_single_project(project_url, required_categories=[]):
+def get_timestamp(original_date_time):       # 2021-08-05T16:39:28+03:00     05.08.2021 | 14:24
+    day = original_date_time[0:2]
+    month = original_date_time[3:5]
+    year = original_date_time[6:10]
+    hour = original_date_time[13:15]
+    minute = original_date_time[16:18]
+
+    iso_date_time = f"{year}-{month}-{day}T{hour}:{minute}:00+03:00"
+    print(iso_date_time)
+
+    date_time_from_iso = datetime.datetime.fromisoformat(iso_date_time)
+    date_time = datetime.datetime.strftime(date_time_from_iso, "%Y-%m-%d %H:%M:%S")
+    timestamp = time.mktime(datetime.datetime.strptime(date_time, "%Y-%m-%d %H:%M:%S").timetuple())
+    return timestamp
+
+
+async def parse_single_project(project_url):            # , required_categories=[]
     """
     Take data from a single page with a project description.
     !!!In case of updating site you need to review soup.find_all!!!
@@ -29,11 +47,15 @@ async def parse_single_project(project_url, required_categories=[]):
             title = soup.find("h1", class_="b-page__title").text
             description = soup.find_all("div", class_=["b-layout__txt", "b-layout__txt_padbot_20"])[7].text.strip()
             price = soup.find("span", class_="b-layout__bold").text.strip()  # may not work
+            publishing_time = soup.find_all("div", class_=["b-layout__txt",
+                                                           "b-layout__txt_padbot_20"])[12].text.strip()[:18]
             project_id = project_url.split('/')[4]
-            print(project_id)
-            print(title)
-            print(description)
-            print(price)
+            # print(project_id)
+            # print(title)
+            # print(description)
+            # print(price)
+
+            print(publishing_time)
 
 
 async def parse_single_page_with_projects(page_url):
@@ -51,9 +73,10 @@ async def parse_single_page_with_projects(page_url):
 
 
 async def main():
-    await parse_single_page_with_projects("https://www.fl.ru/projects/?kind=1")
+    await parse_single_project("https://www.fl.ru/projects/4809507/razrabotat-dizayn-sayta-dlya-studii-interernogo-dizayna-creative-corner-.html")
 
 
 if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    print(get_timestamp('05.08.2021 | 14:24'))
+    # loop = asyncio.get_event_loop()
+    # loop.run_until_complete(main())
