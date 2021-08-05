@@ -49,20 +49,32 @@ async def parse_single_project(project_url):            # , required_categories=
             price = soup.find("span", class_="b-layout__bold").text.strip()  # may not work
             publishing_time = soup.find_all("div", class_=["b-layout__txt",
                                                            "b-layout__txt_padbot_20"])[12].text.strip()[:18]
+            timestamp = get_timestamp(publishing_time)
             project_id = project_url.split('/')[4]
             # print(project_id)
             # print(title)
             # print(description)
             # print(price)
 
-            print(publishing_time)
+            print(timestamp)
 
 
-async def parse_single_page_with_projects(page_url):
+async def parse_single_page_with_projects(page_url, page_number):
+    kind = 1    # show only orders
+    page = page_number
+    params = {'kind': kind, 'page': page_number}
     async with aiohttp.ClientSession() as session:
-        async with session.get(page_url) as resp:
+        async with session.get(page_url, params=params) as resp:
             html = await resp.text()
             soup = BeautifulSoup(html, 'lxml')
+
+            if page_number == 1:
+                num_of_pinned_orders = soup.find_all("span",
+                                                     class_=["b-layout__txt",
+                                                             "b-layout__txt_nowrap",
+                                                             "b-layout__txt_color_323232"])[-1].text.split()[0]
+                print(num_of_pinned_orders)
+
 
             project_titles_with_links = soup.find_all("h2", class_=["b-post__title",
                                                                     "b-post__grid_title p-0",
@@ -73,10 +85,10 @@ async def parse_single_page_with_projects(page_url):
 
 
 async def main():
-    await parse_single_project("https://www.fl.ru/projects/4809507/razrabotat-dizayn-sayta-dlya-studii-interernogo-dizayna-creative-corner-.html")
-
+    required_categories = [['Программирование'],
+                           ['Парсинг данных', 'Разработка Чат-ботов']]
+    await parse_single_page_with_projects("https://www.fl.ru/projects/", 1)
 
 if __name__ == '__main__':
-    print(get_timestamp('05.08.2021 | 14:24'))
-    # loop = asyncio.get_event_loop()
-    # loop.run_until_complete(main())
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
