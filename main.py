@@ -11,7 +11,7 @@ def main():
     print(len(project_dict.keys()))
 
     with open('data.json', 'w') as file:
-        json.dump(project_dict, file)
+        json.dump(project_dict, file)   # срочно дописать
 
 
 if __name__ == '__main__':

@@ -9,8 +9,12 @@ headers = {
 
 required_categories = [['Программирование'],
                        ['Парсинг данных', 'Разработка Чат-ботов']]
+required_words = ['парсер', 'парсинг', 'телеграм', 'бот']
 
 fl_ru_host = "https://www.fl.ru"
 fl_ru_projects_url = "https://www.fl.ru/projects/"
 
 html_examples_dir_path = "html_pages"
+
+token = "my_token"
+
