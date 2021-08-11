@@ -1,3 +1,8 @@
+paths = {
+    'html_examples_dir_path': 'html_pages',
+    'chat_id_list_file_path': 'chat_id_list.dat'
+}
+
 headers = {
     'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/'
               'webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
@@ -14,7 +19,4 @@ required_words = ['парсер', 'парсинг', 'телеграм', 'бот'
 fl_ru_host = "https://www.fl.ru"
 fl_ru_projects_url = "https://www.fl.ru/projects/"
 
-html_examples_dir_path = "html_pages"
-
-token = "my_token"
-
+token = "1947084145:AAE1AxIceVagwLIawjddCkuv5Vs5-Kx-YLA"

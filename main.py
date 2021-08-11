@@ -1,18 +1,30 @@
+from telegram_bot import bot, dp, executor
+from telegram_bot import start, check_on, check_off, check
+from aiogram import Bot
+from aiogram.types import BotCommand
 import asyncio
-import json
-from parsing_data import parse_single_project, parse_single_page_with_projects, project_dict
-from config import fl_ru_projects_url
 
 
-def main():
+async def set_commands(bot: Bot):
+    commands = [
+        BotCommand(command="/start", description="Начало работы"),
+        BotCommand(command="/check_on", description="check_on"),
+        BotCommand(command="/check_off", description="check_off"),
+    ]
+    await bot.set_my_commands(commands)
+
+
+async def main():
+    dp.register_message_handler(start, commands='start')
+    dp.register_message_handler(check_on, commands='check_on')
+    dp.register_message_handler(check_off, commands='check_off')
+    await set_commands(bot=bot)
+
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(parse_single_page_with_projects(fl_ru_projects_url, 1))
+    loop.create_task(check())
 
-    print(len(project_dict.keys()))
-
-    with open('data.json', 'w') as file:
-        json.dump(project_dict, file)   # срочно дописать
+    await dp.start_polling()
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())

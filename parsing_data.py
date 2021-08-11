@@ -6,14 +6,11 @@ from bs4 import BeautifulSoup
 import re
 import time
 import datetime
-from config import headers, fl_ru_host, fl_ru_projects_url, html_examples_dir_path
+from config import headers, fl_ru_host, fl_ru_projects_url
 from config import required_categories, required_words
 import os
 import sys
-from exceptions import check_ddos_guard
 from json_io import get_data_from_file, insert_data_into_file
-
-# https://www.fl.ru/projects/?page=2&kind=1
 
 timeout = aiohttp.ClientTimeout(total=30)
 project_dict = dict()
@@ -27,19 +24,24 @@ def file_recording(file, html_text):
             pass
 
 
-def get_timestamp(original_date_time):  # 2021-08-05T16:39:28+03:00     05.08.2021 | 14:24
-    day = original_date_time[0:2]
-    month = original_date_time[3:5]
-    year = original_date_time[6:10]
-    hour = original_date_time[13:15]
-    minute = original_date_time[16:18]
+def check_ddos_guard(soup):
+    """check whether the page is a ddos-guard page"""
+    title = soup.find('title')
+    if title.text.strip() == 'DDOS-GUARD':
+        print('Сработала защита ddos-guard')
+        sys.exit()
 
-    iso_date_time = f"{year}-{month}-{day}T{hour}:{minute}:00+03:00"
-    # print(iso_date_time)
 
-    date_time_from_iso = datetime.datetime.fromisoformat(iso_date_time)
-    date_time = datetime.datetime.strftime(date_time_from_iso, "%Y-%m-%d %H:%M:%S")
-    timestamp = time.mktime(datetime.datetime.strptime(date_time, "%Y-%m-%d %H:%M:%S").timetuple())
+def get_timestamp(original_date_time_format: str):  # 2021-08-05T16:39:28+03:00     05.08.2021 | 14:24    1628162640.0
+    """get timestamp from time like this: '05.08.2021 | 14:24'"""
+
+    day = int(original_date_time_format[0:2])
+    month = int(original_date_time_format[3:5])
+    year = int(original_date_time_format[6:10])
+    hour = int(original_date_time_format[13:15])
+    minute = int(original_date_time_format[16:18])
+
+    timestamp = datetime.datetime(year, month, day, hour, minute, 0).timestamp()
     return timestamp
 
 
@@ -52,7 +54,7 @@ def get_first_link_number(soup: BeautifulSoup, page_number: int):
             first_link_number = 0
         else:
             first_link_number = int(label_of_pinned_orders[0].text.split()[0])
-        print(f'first_link_number {first_link_number}')
+        # print(f'first_link_number {first_link_number}')
     return first_link_number
 
 
@@ -66,6 +68,9 @@ def get_project_links(soup: BeautifulSoup):
 
 
 def get_project_info(soup: BeautifulSoup):
+    """
+    get title, description, price, publishing_time, timestamp, project_categories from the soup of a project
+    """
     title = soup.find("h1", class_="b-page__title").text
     description = soup.find_all("div", class_=["b-layout__txt", "b-layout__txt_padbot_20"])[7].text.strip()
     price = soup.find("span", class_="b-layout__bold").text.strip()  # may not work
@@ -81,6 +86,7 @@ def get_project_info(soup: BeautifulSoup):
 
 
 def is_valid_project(project_categories: list, title: str, description: str):
+    """check whether the project matches the required conditions"""
     first_condition = False
     if len(project_categories) == 2:
         if project_categories[0] in required_categories[0]:
@@ -98,7 +104,7 @@ def is_valid_project(project_categories: list, title: str, description: str):
     return final_condition
 
 
-async def parse_single_project(project_url, session: aiohttp.ClientSession, num):  # , required_categories=[]
+async def parse_single_project(project_url: str, session: aiohttp.ClientSession, num):  # , required_categories=[]
     """
     Take data from a single page with a project description.
     !!!In case of updating site you need to review soup.find_all!!!
@@ -110,24 +116,15 @@ async def parse_single_project(project_url, session: aiohttp.ClientSession, num)
     project_id = project_url.split('/')[4]
 
     title, description, price, publishing_time, timestamp, project_categories = get_project_info(soup)
-    validity = is_valid_project(project_categories, title, description)
 
     project_dict[project_id] = {
         'timestamp': timestamp,
+        'url': project_url,
         'title': title,
         'description': description,
         'price': price,
         'project_categories': project_categories,
-        'validity': validity,
         }
-
-    # if is_valid_project(soup, title, description):
-    #     project_dict[project_id] = {
-    #         'timestamp': timestamp,
-    #         'title': title,
-    #         'description': description,
-    #         'price': price
-    #     }
 
 
 async def parse_single_page_with_projects(page_url, page_number):
@@ -180,7 +177,9 @@ async def check_news():
                 known_id_is_not_reached = False
                 break
             else:
-                if True:    # project_dict['validity']:
+                if True: # is_valid_project(project_dict[key]['project_categories'],
+                #                     project_dict[key]['title'],
+                #                     project_dict[key]['description']):
                     news_list.append(project_dict[key])
                 project_dict_from_file[key] = project_dict[key]
 
