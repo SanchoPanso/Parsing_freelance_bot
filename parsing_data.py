@@ -198,7 +198,7 @@ async def check_news():
         for key in keys:
             if is_valid_project(project_dict[key]['project_categories'],
                                 project_dict[key]['title'],
-                                project_dict[key]['description']) or True:
+                                project_dict[key]['description']):
                 if key not in project_dict_from_file.keys():
                     news_list.append(project_dict[key])
                     project_dict_from_file[key] = project_dict[key]

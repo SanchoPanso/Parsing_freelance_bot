@@ -59,9 +59,9 @@ async def check_info(message: types.Message):
 async def check():
     while True:
         if checking_is_active(chat_info):
-            print("парсинг начат")
+            # print("парсинг начат")
             news_list = await check_news()
-            print("парсинг закончен")
+            # print("парсинг закончен")
             # print(f"Найденных записей: {len(news_list)}")
             if len(news_list) > 0:
                 for chat_id in chat_info.keys():
@@ -72,6 +72,6 @@ async def check():
                         await bot.send_message(chat_id, message_text)
             await asyncio.sleep(parsing_delay)
         else:
-            print("проверка неактивна")
+            # print("проверка неактивна")
             await asyncio.sleep(waiting_delay)
 
