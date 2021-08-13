@@ -58,14 +58,14 @@ def checking_is_active(chat_info: dict):
 async def check():
     while True:
         if checking_is_active(chat_info):
-            print("Парсинг начат")
+            # print("Парсинг начат")
             news_list, result = await check_news()
             if result == 1:
                 print("Засыпаем до лучших времен")
                 await asyncio.sleep(ddos_delay*(1 + 0.7 * random.random()))
                 print("Просыпаемся")
-            print("Парсинг закончен")
-            print(f"Найденных записей: {len(news_list)}")
+            # print("Парсинг закончен")
+            # print(f"Найденных записей: {len(news_list)}")
             if len(news_list) > 0:
                 for chat_id in chat_info.keys():
                     for new in news_list:
