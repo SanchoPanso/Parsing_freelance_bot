@@ -22,7 +22,7 @@ def write_data_into_file(data: dict, filename: str):
             print('UnicodeEncodeError. Не удалось записать данные')
 
 
-# with open("example.json", "w") as f:
-#     json.dump({'1': 1}, f, indent=4, ensure_ascii=False)
-#     json.dump({'1': 1}, f, indent=4, ensure_ascii=False)
+
+if __name__ == '__main__':
+    print(get_data_from_file("example.json"))
 

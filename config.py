@@ -1,6 +1,6 @@
 paths = {
     'html_examples_dir_path': 'html_pages',
-    'chat_id_list_file_path': 'chat_id_list.dat'
+    'chat_id_list_file_path': 'chat_id_list.json'
 }
 
 headers = {
@@ -21,4 +21,4 @@ fl_ru_projects_url = "https://www.fl.ru/projects/"
 
 token = "1947084145:AAE1AxIceVagwLIawjddCkuv5Vs5-Kx-YLA"
 parsing_delay = 10*60   # sec
-waiting_delay = 30      # sec
+waiting_delay = 20      # sec
