@@ -10,10 +10,11 @@ from config import headers, fl_ru_host, fl_ru_projects_url
 from config import required_categories, required_words
 import os
 import sys
-from json_io import get_data_from_file, insert_data_into_file
+from json_io import get_data_from_file, write_data_into_file
 
 timeout = aiohttp.ClientTimeout(total=30)
 project_dict = dict()
+last_checking_time = None
 
 
 def file_recording(file, html_text):
@@ -100,7 +101,7 @@ def is_valid_project(project_categories: list, title: str, description: str):
             second_condition = True
             break
 
-    final_condition = first_condition + second_condition
+    final_condition = first_condition or second_condition
     return final_condition
 
 
@@ -128,6 +129,7 @@ async def parse_single_project(project_url: str, session: aiohttp.ClientSession,
 
 
 async def parse_single_page_with_projects(page_url, page_number):
+    """start parsing of single projects placed in the page"""
     kind = 1  # show only orders
     params = {'kind': kind, 'page': page_number}
     async with aiohttp.ClientSession(timeout=timeout) as session:
@@ -154,15 +156,18 @@ async def parse_single_page_with_projects(page_url, page_number):
 
 async def check_news():
     global project_dict
-    project_dict_from_file = get_data_from_file("data.json")
-    keys_from_file = project_dict_from_file.keys()
+    global last_checking_time
+    project_dict_from_file = get_data_from_file("project_data.json")
     news_list = []
-    max_time_lag = 10*60*60
+
+    max_time_lag = 5*60*60
     current_time = time.time()
-    known_id_is_not_reached = True
-    time_lag_is_not_max = True
+    if last_checking_time is None:
+        last_checking_time = current_time - max_time_lag
+
     page_number = 1
-    while known_id_is_not_reached and time_lag_is_not_max:
+    end_point_is_not_reached = True
+    while end_point_is_not_reached:
 
         await parse_single_page_with_projects(fl_ru_projects_url, page_number)
         keys = project_dict.keys()
@@ -171,22 +176,57 @@ async def check_news():
             page_number += 1
             continue
         time_of_the_oldest_project = min([project_dict[key]['timestamp'] for key in keys])
-        time_lag_is_not_max = current_time - time_of_the_oldest_project < max_time_lag
+        end_point_is_not_reached = time_of_the_oldest_project > last_checking_time
         for key in keys:
-            if key in keys_from_file:
-                known_id_is_not_reached = False
-                break
-            else:
-                if True: # is_valid_project(project_dict[key]['project_categories'],
-                #                     project_dict[key]['title'],
-                #                     project_dict[key]['description']):
+            if is_valid_project(project_dict[key]['project_categories'],
+                                project_dict[key]['title'],
+                                project_dict[key]['description']):git
+                if project_dict[key] not in project_dict_from_file.values():
                     news_list.append(project_dict[key])
-                project_dict_from_file[key] = project_dict[key]
+                    project_dict_from_file[key] = project_dict[key]
 
+    last_checking_time = current_time
     page_number += 1
-    insert_data_into_file(project_dict_from_file, "data.json")
+    write_data_into_file(project_dict_from_file, "project_data.json")
     project_dict = dict()
     return news_list
+
+
+# async def check_news():
+#     global project_dict
+#     project_dict_from_file = get_data_from_file("data.json")
+#     keys_from_file = project_dict_from_file.keys()
+#     news_list = []
+#     max_time_lag = 10*60*60
+#     current_time = time.time()
+#     known_id_is_not_reached = True
+#     time_lag_is_not_max = True
+#     page_number = 1
+#     while known_id_is_not_reached and time_lag_is_not_max:
+#
+#         await parse_single_page_with_projects(fl_ru_projects_url, page_number)
+#         keys = project_dict.keys()
+#
+#         if len(keys) == 0:
+#             page_number += 1
+#             continue
+#         time_of_the_oldest_project = min([project_dict[key]['timestamp'] for key in keys])
+#         time_lag_is_not_max = current_time - time_of_the_oldest_project < max_time_lag
+#         for key in keys:
+#             if key in keys_from_file:
+#                 known_id_is_not_reached = False
+#                 break
+#             else:
+#                 if True: # is_valid_project(project_dict[key]['project_categories'],
+#                 #                     project_dict[key]['title'],
+#                 #                     project_dict[key]['description']):
+#                     news_list.append(project_dict[key])
+#                 project_dict_from_file[key] = project_dict[key]
+#
+#     page_number += 1
+#     insert_data_into_file(project_dict_from_file, "data.json")
+#     project_dict = dict()
+#     return news_list
 
 
 async def unit_test():
@@ -196,7 +236,7 @@ async def unit_test():
         print("новости спарсены")
         for i in news_list:
             print(i)
-        await asyncio.sleep(60)
+        await asyncio.sleep(5)
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()

@@ -14,13 +14,12 @@ def get_data_from_file(filename: str):
     return data
 
 
-def insert_data_into_file(data: dict, filename: str):
+def write_data_into_file(data: dict, filename: str):
     with open(filename, "w") as f:
-        for key in data.keys():
-            try:
-                json.dump(data[key], f, indent=4, ensure_ascii=False)
-            except UnicodeEncodeError:
-                print('UnicodeEncodeError. Запись с ошибкой пропущена')
+        try:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+        except UnicodeEncodeError:
+            print('UnicodeEncodeError. Не удалось записать данные')
 
 
 # with open("example.json", "w") as f:

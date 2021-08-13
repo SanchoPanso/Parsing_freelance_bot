@@ -1,8 +1,8 @@
-from telegram_bot import bot, dp, executor
-from telegram_bot import start, check_on, check_off, check
 from aiogram import Bot
 from aiogram.types import BotCommand
 import asyncio
+from telegram_bot import bot, dp
+from telegram_bot import start, check_on, check_off, check
 
 
 async def set_commands(bot: Bot):

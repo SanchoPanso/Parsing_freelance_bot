@@ -1,6 +1,7 @@
 from aiogram import Bot, Dispatcher, executor, types
 import asyncio
 from config import paths, token
+from config import parsing_delay, waiting_delay
 from parsing_data import check_news
 import pickle
 
@@ -36,17 +37,17 @@ async def check_off(message: types.Message):
 async def check():
     while True:
         if checking_is_active:
-            print("парсинг начат")
+            # print("парсинг начат")
             news_list = await check_news()
-            print("парсинг закончен")
+            # print("парсинг закончен")
             print(f"Найденных записей: {len(news_list)}")
             if len(news_list) > 0:
                 for chat_id in chat_id_list:
                     for new in news_list:
                         message_text = f"<b>{new['title']}</b>\n{new['description']}"
                         await bot.send_message(chat_id, message_text)
-            await asyncio.sleep(5 * 60)
+            await asyncio.sleep(parsing_delay)
         else:
             print("проверка неактивна")
-            await asyncio.sleep(10)
+            await asyncio.sleep(waiting_delay)
 
