@@ -7,6 +7,7 @@ import re
 import time
 import datetime
 from config import headers, fl_ru_host, fl_ru_projects_url
+from config import paths
 from config import required_categories, required_words
 import os
 import sys
@@ -25,15 +26,16 @@ def file_recording(file, html_text):
             pass
 
 
-def check_ddos_guard(soup):
+def check_ddos_guard(soup: BeautifulSoup) -> bool:
     """check whether the page is a ddos-guard page"""
     title = soup.find('title')
     if title.text.strip() == 'DDOS-GUARD':
         print('Сработала защита ddos-guard')
-        sys.exit()
+        return True
+    return False
 
 
-def get_timestamp(original_date_time_format: str):  # 2021-08-05T16:39:28+03:00     05.08.2021 | 14:24    1628162640.0
+def get_timestamp(original_date_time_format: str) -> float:
     """get timestamp from time like this: '05.08.2021 | 14:24'"""
 
     day = int(original_date_time_format[0:2])
@@ -46,7 +48,7 @@ def get_timestamp(original_date_time_format: str):  # 2021-08-05T16:39:28+03:00 
     return timestamp
 
 
-def get_first_link_number(soup: BeautifulSoup, page_number: int):
+def get_first_link_number(soup: BeautifulSoup, page_number: int) -> int:
     """get the first link number which is the first not pinned project link"""
     first_link_number = 0
     if page_number == 1:
@@ -59,7 +61,7 @@ def get_first_link_number(soup: BeautifulSoup, page_number: int):
     return first_link_number
 
 
-def get_project_links(soup: BeautifulSoup):
+def get_project_links(soup: BeautifulSoup) -> list:
     """get project links"""
     project_titles_with_links = soup.find_all("h2", class_=["b-post__title",
                                                             "b-post__grid_title p-0",
@@ -68,7 +70,7 @@ def get_project_links(soup: BeautifulSoup):
     return project_links
 
 
-def get_project_info(soup: BeautifulSoup):
+def get_project_info(soup: BeautifulSoup) -> tuple:
     """
     get title, description, price, publishing_time, timestamp, project_categories from the soup of a project
     """
@@ -101,7 +103,7 @@ def get_project_info(soup: BeautifulSoup):
     return title, description, price, publishing_time, timestamp, project_categories
 
 
-def is_valid_project(project_categories: list, title: str, description: str):
+def is_valid_project(project_categories: list, title: str, description: str) -> bool:
     """check whether the project matches the required conditions"""
     first_condition = False
     if len(project_categories) == 2:
@@ -120,7 +122,7 @@ def is_valid_project(project_categories: list, title: str, description: str):
     return final_condition
 
 
-async def parse_single_project(project_url: str, session: aiohttp.ClientSession, num):  # , required_categories=[]
+async def parse_single_project(project_url: str, session: aiohttp.ClientSession):
     """
     Take data from a single page with a project description.
     !!!In case of updating site you need to review soup.find_all!!!
@@ -148,7 +150,7 @@ async def parse_single_project(project_url: str, session: aiohttp.ClientSession,
 
 async def parse_single_page_with_projects(page_url, page_number):
     """start parsing of single projects placed in the page"""
-    kind = 1  # show only orders
+    kind = 1  # this kind is needed to show only orders
     params = {'kind': kind, 'page': page_number}
     async with aiohttp.ClientSession(timeout=timeout) as session:
         try:
@@ -159,7 +161,8 @@ async def parse_single_page_with_projects(page_url, page_number):
             sys.exit("Не удалось подключиться к сайту")
 
         soup = BeautifulSoup(html, 'html.parser')
-        check_ddos_guard(soup)
+        if check_ddos_guard(soup):
+            return 1    # ddos guard
 
         first_link_num = get_first_link_number(soup, page_number)
         project_links = get_project_links(soup)
@@ -167,15 +170,17 @@ async def parse_single_page_with_projects(page_url, page_number):
         tasks = []
         for i in range(first_link_num, len(project_links)):
             # print(i)
-            task = asyncio.create_task(parse_single_project(f"{fl_ru_host}{project_links[i]}", session, i + 1))
+            task = asyncio.create_task(parse_single_project(f"{fl_ru_host}{project_links[i]}", session))
             tasks.append(task)
         await asyncio.gather(*tasks)
+
+        return 0    # success
 
 
 async def check_news():
     global project_dict
     global last_checking_time
-    project_dict_from_file = get_data_from_file("project_data.json")
+    project_dict_from_file = get_data_from_file(paths['project_data_file_path'])
     news_list = []
 
     max_time_lag = 5*60*60
@@ -187,12 +192,11 @@ async def check_news():
     end_point_is_not_reached = True
     while end_point_is_not_reached:
 
-        await parse_single_page_with_projects(fl_ru_projects_url, page_number)
-        keys = project_dict.keys()
+        result = await parse_single_page_with_projects(fl_ru_projects_url, page_number)
+        if result == 1:
+            return news_list, 1
 
-        if len(keys) == 0:
-            page_number += 1
-            continue
+        keys = project_dict.keys()
         time_of_the_oldest_project = min([project_dict[key]['timestamp'] for key in keys])
         end_point_is_not_reached = time_of_the_oldest_project > last_checking_time
         for key in keys:
@@ -202,49 +206,12 @@ async def check_news():
                 if key not in project_dict_from_file.keys():
                     news_list.append(project_dict[key])
                     project_dict_from_file[key] = project_dict[key]
+        page_number += 1
 
     last_checking_time = current_time
-    page_number += 1
-    write_data_into_file(project_dict_from_file, "project_data.json")
+    write_data_into_file(project_dict_from_file, paths['project_data_file_path'])
     project_dict = dict()
-    return news_list
-
-
-# async def check_news():
-#     global project_dict
-#     project_dict_from_file = get_data_from_file("data.json")
-#     keys_from_file = project_dict_from_file.keys()
-#     news_list = []
-#     max_time_lag = 10*60*60
-#     current_time = time.time()
-#     known_id_is_not_reached = True
-#     time_lag_is_not_max = True
-#     page_number = 1
-#     while known_id_is_not_reached and time_lag_is_not_max:
-#
-#         await parse_single_page_with_projects(fl_ru_projects_url, page_number)
-#         keys = project_dict.keys()
-#
-#         if len(keys) == 0:
-#             page_number += 1
-#             continue
-#         time_of_the_oldest_project = min([project_dict[key]['timestamp'] for key in keys])
-#         time_lag_is_not_max = current_time - time_of_the_oldest_project < max_time_lag
-#         for key in keys:
-#             if key in keys_from_file:
-#                 known_id_is_not_reached = False
-#                 break
-#             else:
-#                 if True: # is_valid_project(project_dict[key]['project_categories'],
-#                 #                     project_dict[key]['title'],
-#                 #                     project_dict[key]['description']):
-#                     news_list.append(project_dict[key])
-#                 project_dict_from_file[key] = project_dict[key]
-#
-#     page_number += 1
-#     insert_data_into_file(project_dict_from_file, "data.json")
-#     project_dict = dict()
-#     return news_list
+    return news_list, 0
 
 
 async def unit_test():

@@ -7,7 +7,9 @@ def get_data_from_file(filename: str):
         with open(filename, "r") as f:
             try:
                 data = json.load(f)
-            except (json.decoder.JSONDecodeError, UnicodeDecodeError):  # file is empty
+            except json.decoder.JSONDecodeError:  # file is empty
+                data = dict()
+            except UnicodeDecodeError:
                 print(f"Возникли проблемы с открытием {filename}")
                 data = dict()
     else:

@@ -16,6 +16,7 @@ async def set_commands(bot: Bot):
 
 
 async def main():
+
     dp.register_message_handler(start, commands='start')
     dp.register_message_handler(check_on, commands='check_on')
     dp.register_message_handler(check_off, commands='check_off')
@@ -29,4 +30,5 @@ async def main():
 
 
 if __name__ == '__main__':
+    print('Ready')
     asyncio.run(main())
