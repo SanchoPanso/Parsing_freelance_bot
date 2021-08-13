@@ -72,17 +72,32 @@ def get_project_info(soup: BeautifulSoup):
     """
     get title, description, price, publishing_time, timestamp, project_categories from the soup of a project
     """
-    title = soup.find("h1", class_="b-page__title").text
-    description = soup.find_all("div", class_=["b-layout__txt", "b-layout__txt_padbot_20"])[7].text.strip()
-    price = soup.find("span", class_="b-layout__bold").text.strip()  # may not work
-    publishing_time = soup.find_all("div", class_=["b-layout__txt",
-                                                   "b-layout__txt_padbot_20"])[-1].text.strip()[:18]
-    timestamp = get_timestamp(publishing_time)
-    project_categories_soup = soup.find_all("div", class_=["b-layout__txt",
-                                                           "b-layout__txt_fontsize_11",
-                                                           "b-layout__txt_padbot_20"])[-4]  # 9
-
-    project_categories = [i.text for i in project_categories_soup.find_all("a")]
+    try:
+        title = soup.find("h1", class_="b-page__title").text.strip()
+    except:
+        title = None
+    try:
+        description = soup.find_all("div", class_=["b-layout__txt", "b-layout__txt_padbot_20"])[7].text.strip()
+    except:
+        description = None
+    try:
+        price = soup.find("span", class_="b-layout__bold").text.strip()  # may not work
+    except:
+        price = None
+    try:
+        publishing_time = soup.find_all("div", class_=["b-layout__txt",
+                                                       "b-layout__txt_padbot_20"])[-1].text.strip()[:18]
+        timestamp = get_timestamp(publishing_time)
+    except:
+        publishing_time = None
+        timestamp = None
+    try:
+        project_categories_soup = soup.find_all("div", class_=["b-layout__txt",
+                                                               "b-layout__txt_fontsize_11",
+                                                               "b-layout__txt_padbot_20"])[-4]  # 9
+        project_categories = [i.text for i in project_categories_soup.find_all("a")]
+    except:
+        project_categories = []
     return title, description, price, publishing_time, timestamp, project_categories
 
 
@@ -116,16 +131,19 @@ async def parse_single_project(project_url: str, session: aiohttp.ClientSession,
 
     project_id = project_url.split('/')[4]
 
-    title, description, price, publishing_time, timestamp, project_categories = get_project_info(soup)
+    project_info = get_project_info(soup)
 
-    project_dict[project_id] = {
-        'timestamp': timestamp,
-        'url': project_url,
-        'title': title,
-        'description': description,
-        'price': price,
-        'project_categories': project_categories,
-        }
+    if None not in project_info:
+        title, description, price, publishing_time, timestamp, project_categories = project_info
+        project_dict[project_id] = {
+            'timestamp': timestamp,
+            'publishing_time': publishing_time,
+            'url': project_url,
+            'title': title,
+            'description': description,
+            'price': price,
+            'project_categories': project_categories,
+            }
 
 
 async def parse_single_page_with_projects(page_url, page_number):
@@ -180,8 +198,8 @@ async def check_news():
         for key in keys:
             if is_valid_project(project_dict[key]['project_categories'],
                                 project_dict[key]['title'],
-                                project_dict[key]['description']):
-                if project_dict[key] not in project_dict_from_file.values():
+                                project_dict[key]['description']) or True:
+                if key not in project_dict_from_file.keys():
                     news_list.append(project_dict[key])
                     project_dict_from_file[key] = project_dict[key]
 

@@ -66,7 +66,9 @@ async def check():
             if len(news_list) > 0:
                 for chat_id in chat_info.keys():
                     for new in news_list:
-                        message_text = f"<b>{new['title']}</b>\n{new['description']}"
+                        message_text = f"<a href = \'{new['url']}\'>{new['title']}</a>\n" \
+                                       f"{new['description']}\n" \
+                                       f"{new['publishing_time']}"
                         await bot.send_message(chat_id, message_text)
             await asyncio.sleep(parsing_delay)
         else:
