@@ -37,7 +37,6 @@ def check_ddos_guard(soup: BeautifulSoup) -> bool:
 
 def get_timestamp(original_date_time_format: str) -> float:
     """get timestamp from time like this: '05.08.2021 | 14:24'"""
-
     day = int(original_date_time_format[0:2])
     month = int(original_date_time_format[3:5])
     year = int(original_date_time_format[6:10])
