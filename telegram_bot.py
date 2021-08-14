@@ -1,15 +1,20 @@
 from aiogram import Bot, Dispatcher, executor, types
 import asyncio
-from config import paths, token
+from config import paths
 from config import parsing_delay, waiting_delay, ddos_delay
 from json_io import get_data_from_file, write_data_into_file
 from parsing_data import check_news
+from os import getenv
 import random
+import sys
 
 random.seed()
 chat_info_file_path = paths['chat_id_list_file_path']
 chat_info = get_data_from_file(chat_info_file_path)
 
+token = getenv("BOT_TOKEN")
+if not token:
+    sys.exit("Error: no token provided")
 
 bot = Bot(token=token, parse_mode=types.ParseMode.HTML)
 dp = Dispatcher(bot)
@@ -61,18 +66,27 @@ async def check():
             # print("Парсинг начат")
             news_list, result = await check_news()
             if result == 1:
-                print("Засыпаем до лучших времен")
+                print("Сработала защита ddos-guard. Засыпаем до лучших времен")
+                for chat_id in chat_info.keys():
+                    await bot.send_message(chat_id, "Сработала защита ddos-guard. Засыпаем до лучших времен")
+
                 await asyncio.sleep(ddos_delay*(1 + 0.7 * random.random()))
+
                 print("Просыпаемся")
+                for chat_id in chat_info.keys():
+                    await bot.send_message(chat_id, "Просыпаемся")
+                continue
+
             # print("Парсинг закончен")
             # print(f"Найденных записей: {len(news_list)}")
             if len(news_list) > 0:
                 for chat_id in chat_info.keys():
-                    for new in news_list:
-                        message_text = f"<a href = \'{new['url']}\'>{new['title']}</a>\n" \
-                                       f"{new['description']}\n" \
-                                       f"{new['publishing_time']}"
-                        await bot.send_message(chat_id, message_text)
+                    if chat_info[chat_id]['checking_is_active'] is True:
+                        for new in news_list:
+                            message_text = f"<a href = \'{new['url']}\'>{new['title']}</a>\n" \
+                                           f"{new['description']}\n" \
+                                           f"{new['publishing_time']}"
+                            await bot.send_message(chat_id, message_text)
             await asyncio.sleep(parsing_delay * (1 + 0.5 * random.random()))
         else:
             # print("проверка неактивна")

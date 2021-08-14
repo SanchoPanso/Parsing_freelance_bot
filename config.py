@@ -20,7 +20,6 @@ required_words = ['парсер', 'парсинг', 'телеграм', 'бот'
 fl_ru_host = "https://www.fl.ru"
 fl_ru_projects_url = "https://www.fl.ru/projects/"
 
-token = "1947084145:AAHfvNkKAdZ_nUxz8a3t210JYlPsTKWzbQU"
 parsing_delay = 10*60
 waiting_delay = 20
 ddos_delay = 3*60*60

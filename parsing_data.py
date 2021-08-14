@@ -1,16 +1,13 @@
 import aiohttp
 import asyncio
-import lxml
-import json
 from bs4 import BeautifulSoup
-import re
-import time
-import datetime
 from config import headers, fl_ru_host, fl_ru_projects_url
 from config import paths
 from config import required_categories, required_words
-import os
+import datetime
+import re
 import sys
+import time
 from json_io import get_data_from_file, write_data_into_file
 
 timeout = aiohttp.ClientTimeout(total=30)
@@ -30,7 +27,6 @@ def check_ddos_guard(soup: BeautifulSoup) -> bool:
     """check whether the page is a ddos-guard page"""
     title = soup.find('title')
     if title.text.strip() == 'DDOS-GUARD':
-        print('Сработала защита ddos-guard')
         return True
     return False
 

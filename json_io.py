@@ -25,7 +25,6 @@ def write_data_into_file(data: dict, filename: str):
             print('UnicodeEncodeError. Не удалось записать данные')
 
 
-
 if __name__ == '__main__':
     print(get_data_from_file("example.json"))
 
