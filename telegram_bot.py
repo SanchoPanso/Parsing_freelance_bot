@@ -4,9 +4,12 @@ from config import paths
 from config import parsing_delay, waiting_delay, ddos_delay
 from json_io import get_data_from_file, write_data_into_file
 from parsing_data import check_news
+from parsers.parsing_fl import FLParser, ParsingResult
 from os import getenv
 import random
 import sys
+
+fl_parser = FLParser()
 
 random.seed()
 chat_info_file_path = paths['chat_id_list_file_path']
@@ -65,8 +68,8 @@ async def check():
     while True:
         if checking_is_active(chat_info):
             # print("Парсинг начат")
-            news_list, result = await check_news()
-            if result == 1:
+            news_list, result = await fl_parser.check_news()
+            if result == ParsingResult.BLOCKED_BY_GUARD:
                 print("Сработала защита ddos-guard. Засыпаем до лучших времен")
                 for chat_id in chat_info.keys():
                     await bot.send_message(chat_id, "Сработала защита ddos-guard. Засыпаем до лучших времен")
@@ -76,20 +79,17 @@ async def check():
                 print("Просыпаемся")
                 for chat_id in chat_info.keys():
                     await bot.send_message(chat_id, "Просыпаемся")
-                continue
-
-            # print("Парсинг закончен")
-            # print(f"Найденных записей: {len(news_list)}")
-            if len(news_list) > 0:
-                for chat_id in chat_info.keys():
-                    if chat_info[chat_id]['checking_is_active'] is True:
-                        for new in news_list:
-                            message_text = f"<a href = \'{new['url']}\'>{new['title']}</a>\n" \
-                                           f"{new['description']}\n" \
-                                           f"{new['publishing_time']}"
-                            await bot.send_message(chat_id, message_text)
-            await asyncio.sleep(parsing_delay * (1 + 0.5 * random.random()))
-        else:
-            # print("проверка неактивна")
-            await asyncio.sleep(waiting_delay)
+            elif result == ParsingResult.SUCCESSFULLY:
+                # print("Парсинг закончен")
+                # print(f"Найденных записей: {len(news_list)}")
+                if len(news_list) > 0:
+                    for chat_id in chat_info.keys():
+                        if chat_info[chat_id]['checking_is_active'] is True:
+                            for new in news_list:
+                                message_text = new
+                                await bot.send_message(chat_id, message_text)
+                await asyncio.sleep(parsing_delay * (1 + 0.5 * random.random()))
+            else:
+                # print("проверка неактивна")
+                await asyncio.sleep(waiting_delay)
 

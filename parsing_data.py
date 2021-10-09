@@ -9,10 +9,16 @@ import re
 import sys
 import time
 from json_io import get_data_from_file, write_data_into_file
+from enum import Enum
 
 timeout = aiohttp.ClientTimeout(total=30)
 project_dict = dict()
 last_checking_time = None
+
+
+class ParsingResult(Enum):
+    SUCCESSFULLY = 0
+    BLOCKED_BY_GUARD = 1
 
 
 def file_recording(file, html_text):
@@ -157,7 +163,7 @@ async def parse_single_page_with_projects(page_url, page_number):
 
         soup = BeautifulSoup(html, 'html.parser')
         if check_ddos_guard(soup):
-            return 1    # ddos guard
+            return ParsingResult.BLOCKED_BY_GUARD    # ddos guard
 
         first_link_num = get_first_link_number(soup, page_number)
         project_links = get_project_links(soup)
@@ -169,7 +175,7 @@ async def parse_single_page_with_projects(page_url, page_number):
             tasks.append(task)
         await asyncio.gather(*tasks)
 
-        return 0    # success
+        return ParsingResult.SUCCESSFULLY    # success
 
 
 async def check_news():
