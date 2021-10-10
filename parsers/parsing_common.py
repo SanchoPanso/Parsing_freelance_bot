@@ -3,7 +3,7 @@ import asyncio
 from bs4 import BeautifulSoup
 from enum import Enum
 from json_io import get_data_from_file, write_data_into_file
-from config import headers, fl_ru_host, fl_ru_projects_url
+from config import headers
 from config import paths
 from config import required_categories, required_words
 import time
@@ -80,7 +80,7 @@ class Parser:
 
     async def parse_single_page_with_projects(self, page_url, page_number) -> ParsingResult:
         """start parsing of single projects placed in the page"""
-        return ParsingResult.NOT_IMPLEMENTED
+        raise NotImplementedError
 
     async def parse_single_project(self, project_url: str, project_mark: bool,
                                    session: aiohttp.ClientSession):
@@ -99,24 +99,6 @@ class Parser:
 
     def is_valid_project(self, project_info: dict) -> bool:
         """check whether the project matches the required conditions"""
-        # project_categories = project_info['project_categories']
-        # title, description = project_info['title']
-        # description = project_info['description']
-        # first_condition = False
-        # if len(project_categories) == 2:
-        #     if project_categories[0] in required_categories[0]:
-        #         if project_categories[1] in required_categories[1]:
-        #             first_condition = True
-        #
-        # second_condition = False
-        # text = f"{title} {description}".lower()
-        # for word in required_words:
-        #     if re.match(word, text):
-        #         second_condition = True
-        #         break
-        #
-        # final_condition = first_condition or second_condition
-        # return final_condition
         raise NotImplementedError
 
     def format_new(self, new: dict) -> str:

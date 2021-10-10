@@ -4,7 +4,7 @@ from config import paths
 from config import parsing_delay, waiting_delay, ddos_delay
 from json_io import get_data_from_file, write_data_into_file
 from parsing_data import check_news
-from parsers.parsing_fl import FLParser, ParsingResult
+from parsers.parsing_fl_old import FLParser, ParsingResult
 from os import getenv
 import random
 import sys

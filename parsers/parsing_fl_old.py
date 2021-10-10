@@ -1,11 +1,65 @@
+import aiohttp
+import asyncio
+from bs4 import BeautifulSoup
+from config import headers, fl_ru_host, fl_ru_projects_url
+from config import paths
+from config import required_categories, required_words
 import datetime
 import re
 import sys
-from config import fl_ru_host, fl_ru_projects_url
-from parsers.parsing_common import *
+import time
+from json_io import get_data_from_file, write_data_into_file
+from enum import Enum
 
 
-class FLParser(Parser):
+class ParsingResult(Enum):
+    SUCCESSFULLY = 0
+    BLOCKED_BY_GUARD = 1
+
+
+class FLParser:
+    def __init__(self):
+        self.timeout = aiohttp.ClientTimeout(total=30)
+        self.project_dict = dict()
+        self.last_checking_time = None
+
+    async def check_news(self) -> tuple:
+        project_dict_from_file = get_data_from_file(paths['project_data_file_path'])
+        news_list = []
+
+        max_time_lag = 5 * 60 * 60
+        current_time = time.time()
+        if self.last_checking_time is None:
+            self.last_checking_time = current_time - max_time_lag
+
+        page_number = 1
+        end_point_is_not_reached = True
+        while end_point_is_not_reached:
+
+            result = await self.parse_single_page_with_projects(fl_ru_projects_url, page_number)
+            if result == ParsingResult.BLOCKED_BY_GUARD:
+                return news_list, result
+
+            keys = self.project_dict.keys()
+
+            if len(keys) > 0:
+                time_of_the_oldest_project = min([self.project_dict[key]['timestamp'] for key in keys])
+                end_point_is_not_reached = time_of_the_oldest_project > self.last_checking_time
+
+            for key in keys:
+                if self.is_valid_project(self.project_dict[key]['project_categories'],
+                                         self.project_dict[key]['title'],
+                                         self.project_dict[key]['description']):
+                    if key not in project_dict_from_file.keys():
+                        news_list.append(self.format_new(self.project_dict[key]))
+                        project_dict_from_file[key] = self.project_dict[key]
+            page_number += 1
+
+        self.last_checking_time = current_time
+        write_data_into_file(project_dict_from_file, paths['project_data_file_path'])
+        self.project_dict = dict()
+        return news_list, ParsingResult.SUCCESSFULLY
+
     async def parse_single_page_with_projects(self, page_url, page_number) -> ParsingResult:
         """start parsing of single projects placed in the page"""
         kind = 1  # this kind is needed to show only orders
@@ -16,7 +70,7 @@ class FLParser(Parser):
                     html = await resp.text()
             except Exception as exp:
                 print(exp)
-                sys.exit("Не удалось подключиться к сайту")  # FIX IT!!!
+                sys.exit("Не удалось подключиться к сайту")     # FIX IT!!!
 
             soup = BeautifulSoup(html, 'html.parser')
             if self.check_ddos_guard(soup):
@@ -68,12 +122,6 @@ class FLParser(Parser):
                         f"{new['publishing_time']}"
         return formatted_new
 
-    def update_cond_for_cycle_ending(self):
-        keys = self.project_dict.keys()
-        if len(keys) > 0:
-            time_of_the_oldest_project = min([self.project_dict[key]['timestamp'] for key in keys])
-            self.end_point_is_not_reached = time_of_the_oldest_project > self.last_checking_time
-
     def check_ddos_guard(self, soup: BeautifulSoup) -> bool:
         """check whether the page is a ddos-guard page"""
         title = soup.find('title')
@@ -116,7 +164,7 @@ class FLParser(Parser):
                                                                'b-post_margbot_20',
                                                                'b-post_bordbot_eee',
                                                                'b-post_relative'])
-
+        
         project_marks = [i.find('i') is not None for i in project_divs_with_marks]
         return project_links, project_marks
 
@@ -154,11 +202,8 @@ class FLParser(Parser):
             project_categories = []
         return title, description, price, publishing_time, timestamp, project_categories
 
-    def is_valid_project(self, project_info: dict) -> bool:
+    def is_valid_project(self, project_categories: list, title: str, description: str) -> bool:
         """check whether the project matches the required conditions"""
-        project_categories = project_info['project_categories']
-        title, description = project_info['title']
-        description = project_info['description']
         first_condition = False
         if len(project_categories) == 2:
             if project_categories[0] in required_categories[0]:
@@ -177,7 +222,7 @@ class FLParser(Parser):
 
 
 async def fl_parser_test():
-    fl_parser = FLParser(fl_ru_projects_url, paths['project_data_file_path'])
+    fl_parser = FLParser()
     while True:
         print("начало парсинга новостей")
         news_list = await fl_parser.check_news()
