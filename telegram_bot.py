@@ -25,6 +25,7 @@ dp = Dispatcher(bot)
 
 async def start(message: types.Message):
     chat_id = message.chat.id
+    print(chat_id)
     if chat_id not in chat_info.keys():
         chat_info[str(chat_id)] = {'checking_is_active': False}
         # write_data_into_file(chat_info, chat_info_file_path)
@@ -35,7 +36,6 @@ async def check_on(message: types.Message):
     global chat_info
     chat_id = message.chat.id
     chat_info[str(chat_id)] = {'checking_is_active': True}
-    print(chat_id)
     # write_data_into_file(chat_info, chat_info_file_path)
     await message.answer("Проверка включена")
 
@@ -89,7 +89,7 @@ async def check():
                                 message_text = new
                                 await bot.send_message(chat_id, message_text)
                 await asyncio.sleep(parsing_delay * (1 + 0.5 * random.random()))
-            else:
-                # print("проверка неактивна")
-                await asyncio.sleep(waiting_delay)
+        else:
+            # print("проверка неактивна")
+            await asyncio.sleep(waiting_delay)
 

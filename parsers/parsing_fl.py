@@ -41,8 +41,10 @@ class FLParser:
                 return news_list, result
 
             keys = self.project_dict.keys()
-            time_of_the_oldest_project = min([self.project_dict[key]['timestamp'] for key in keys])
-            end_point_is_not_reached = time_of_the_oldest_project > self.last_checking_time
+
+            if len(keys) > 0:
+                time_of_the_oldest_project = min([self.project_dict[key]['timestamp'] for key in keys])
+                end_point_is_not_reached = time_of_the_oldest_project > self.last_checking_time
 
             for key in keys:
                 if self.is_valid_project(self.project_dict[key]['project_categories'],
@@ -68,26 +70,28 @@ class FLParser:
                     html = await resp.text()
             except Exception as exp:
                 print(exp)
-                sys.exit("Не удалось подключиться к сайту")
+                sys.exit("Не удалось подключиться к сайту")     # FIX IT!!!
 
             soup = BeautifulSoup(html, 'html.parser')
             if self.check_ddos_guard(soup):
                 return ParsingResult.BLOCKED_BY_GUARD
 
             first_link_num = self.get_first_link_number(soup, page_number)
-            project_links = self.get_project_links(soup)
+            project_links, project_marks = self.get_project_links_and_marks(soup)
 
             tasks = []
             for i in range(first_link_num, len(project_links)):
                 # print(i)
                 task = asyncio.create_task(self.parse_single_project(f"{fl_ru_host}{project_links[i]}",
+                                                                     project_marks[i],
                                                                      session))
                 tasks.append(task)
             await asyncio.gather(*tasks)
 
             return ParsingResult.SUCCESSFULLY
 
-    async def parse_single_project(self, project_url: str, session: aiohttp.ClientSession):
+    async def parse_single_project(self, project_url: str, project_mark: bool,
+                                   session: aiohttp.ClientSession):
         """
         Take data from a single page with a project description.
         !!!In case of updating site you need to review soup.find_all!!!
@@ -148,13 +152,21 @@ class FLParser:
             # print(f'first_link_number {first_link_number}')
         return first_link_number
 
-    def get_project_links(self, soup: BeautifulSoup) -> list:
+    def get_project_links_and_marks(self, soup: BeautifulSoup):
         """get project links"""
         project_titles_with_links = soup.find_all("h2", class_=["b-post__title",
                                                                 "b-post__grid_title p-0",
                                                                 "b-post__pin"])
         project_links = [i.find("a").get("href") for i in project_titles_with_links]
-        return project_links
+
+        project_divs_with_marks = soup.find_all('div', class_=['b-post',
+                                                               'b-post_padbot_15',
+                                                               'b-post_margbot_20',
+                                                               'b-post_bordbot_eee',
+                                                               'b-post_relative'])
+        
+        project_marks = [i.find('i') is not None for i in project_divs_with_marks]
+        return project_links, project_marks
 
     def get_project_info(self, soup: BeautifulSoup) -> tuple:
         """
