@@ -3,6 +3,11 @@ from aiogram.types import BotCommand
 import asyncio
 from telegram_bot import bot, dp
 from telegram_bot import start, check_on, check_off, check_info, check
+import logging
+import sys
+import logger
+
+logger = logger.get_logger("App")
 
 
 async def set_commands(bot: Bot):
@@ -30,5 +35,5 @@ async def main():
 
 
 if __name__ == '__main__':
-    print('Ready')
+    logger.info('Program started')
     asyncio.run(main())

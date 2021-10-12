@@ -1,8 +1,16 @@
+import aiohttp
+import asyncio
+from bs4 import BeautifulSoup
 import datetime
 import re
-import sys
+from config import headers
 from config import fl_ru_host, fl_ru_projects_url
-from parsers.parsing_common import *
+from config import required_categories, required_words
+from config import paths
+from parsers.parsing_common import Parser, ParsingResult
+import logging
+
+logger = logging.getLogger("App.FLParser")
 
 
 class FLParser(Parser):
@@ -10,13 +18,13 @@ class FLParser(Parser):
         """start parsing of single projects placed in the page"""
         kind = 1  # this kind is needed to show only orders
         params = {'kind': kind, 'page': page_number}
+        logger.debug(f"Parse page number{page_number}")
         async with aiohttp.ClientSession(timeout=self.timeout) as session:
             try:
                 async with session.get(page_url, params=params, headers=headers) as resp:
                     html = await resp.text()
             except Exception as exp:
                 print(exp)
-                sys.exit("Не удалось подключиться к сайту")  # FIX IT!!!
 
             soup = BeautifulSoup(html, 'html.parser')
             if self.check_ddos_guard(soup):
@@ -34,7 +42,7 @@ class FLParser(Parser):
                 tasks.append(task)
             await asyncio.gather(*tasks)
 
-            return ParsingResult.SUCCESSFULLY
+            return ParsingResult.SUCCESSFUL
 
     async def parse_single_project(self, project_url: str, project_mark: bool,
                                    session: aiohttp.ClientSession):
@@ -42,15 +50,17 @@ class FLParser(Parser):
         Take data from a single page with a project description.
         !!!In case of updating site you need to review soup.find_all!!!
         """
+        project_id = project_url.split('/')[4]
+        logger.debug(f"Parse project {project_id}")
+
         async with session.get(project_url, headers=headers) as resp:
             html = await resp.text()
             soup = BeautifulSoup(html, 'html.parser')
 
-        project_id = project_url.split('/')[4]
-
         project_info = self.get_project_info(soup)
 
         if None not in project_info:
+            logger.debug(f"Project {project_id} successfully parsed")
             title, description, price, publishing_time, timestamp, project_categories = project_info
             self.project_dict[project_id] = {
                 'timestamp': timestamp,
@@ -61,6 +71,29 @@ class FLParser(Parser):
                 'price': price,
                 'project_categories': project_categories,
             }
+        else:
+            logger.debug(f"Project {project_id} didn't successfully parsed")
+
+    def is_valid_project(self, project_info: dict) -> bool:
+        """check whether the project matches the required conditions"""
+        project_categories = project_info['project_categories']
+        title = project_info['title']
+        description = project_info['description']
+        first_condition = False
+        if len(project_categories) == 2:
+            if project_categories[0] in required_categories[0]:
+                if project_categories[1] in required_categories[1]:
+                    first_condition = True
+
+        second_condition = False
+        text = f"{title} {description}".lower()
+        for word in required_words:
+            if re.match(word, text):
+                second_condition = True
+                break
+
+        final_condition = first_condition or second_condition
+        return final_condition
 
     def format_new(self, new: dict):
         formatted_new = f"<a href = \'{new['url']}\'>{new['title']}</a>\n" \
@@ -124,56 +157,62 @@ class FLParser(Parser):
         """
         get title, description, price, publishing_time, timestamp, project_categories from the soup of a project
         """
-        try:
-            title = soup.find("h1", class_="b-page__title").text.strip()
-        except:
-            title = None
-        try:
-            description = soup.find_all("div",
-                                        class_=["b-layout__txt",
-                                                "b-layout__txt_padbot_20"])[7].text.strip()
-        except:
-            description = None
-        try:
-            price = soup.find("span", class_="b-layout__bold").text.strip()  # may not work
-        except:
-            price = None
-        try:
-            publishing_time = soup.find_all("div", class_=["b-layout__txt",
-                                                           "b-layout__txt_padbot_20"])[-1].text.strip()[:18]
-            timestamp = self.get_timestamp(publishing_time)
-        except:
-            publishing_time = None
-            timestamp = None
-        try:
-            project_categories_soup = soup.find_all("div", class_=["b-layout__txt",
-                                                                   "b-layout__txt_fontsize_11",
-                                                                   "b-layout__txt_padbot_20"])[-4]  # 9
-            project_categories = [i.text for i in project_categories_soup.find_all("a")]
-        except:
-            project_categories = []
+        title = self.get_title(soup)
+        description = self.get_description(soup)
+        price = self.get_price(soup)
+        publishing_time, timestamp = self.get_publishing_time_and_timestamp(soup)
+        project_categories = self.get_project_categories(soup)
+
         return title, description, price, publishing_time, timestamp, project_categories
 
-    def is_valid_project(self, project_info: dict) -> bool:
-        """check whether the project matches the required conditions"""
-        project_categories = project_info['project_categories']
-        title, description = project_info['title']
-        description = project_info['description']
-        first_condition = False
-        if len(project_categories) == 2:
-            if project_categories[0] in required_categories[0]:
-                if project_categories[1] in required_categories[1]:
-                    first_condition = True
+    def get_title(self, soup: BeautifulSoup) -> str or None:
+        title_soup = soup.find("h1", class_="b-page__title")
+        if title_soup is None:
+            title = None
+        else:
+            title = title_soup.text.strip()
+        return title
 
-        second_condition = False
-        text = f"{title} {description}".lower()
-        for word in required_words:
-            if re.match(word, text):
-                second_condition = True
-                break
+    def get_description(self, soup: BeautifulSoup) -> str or None:
+        description_soup_list = soup.find_all("div",
+                                              class_=["b-layout__txt",
+                                                      "b-layout__txt_padbot_20"])
 
-        final_condition = first_condition or second_condition
-        return final_condition
+        if len(description_soup_list) == 0:
+            description = None
+        else:
+            description = description_soup_list[7].text.strip()
+        return description
+
+    def get_price(self, soup: BeautifulSoup) -> str or None:
+        price_soup = soup.find("span", class_="b-layout__bold")
+        if price_soup is None:
+            price = None
+        else:
+            price = price_soup.text.strip()
+        return price
+
+    def get_publishing_time_and_timestamp(self, soup: BeautifulSoup) -> tuple:
+        publishing_time_soup = soup.find_all("div", class_=["b-layout__txt",
+                                                            "b-layout__txt_padbot_20"])
+        if len(publishing_time_soup) == 0:
+            publishing_time = None
+            timestamp = None
+        else:
+            publishing_time = publishing_time_soup[-1].text.strip()[:18]
+            timestamp = self.get_timestamp(publishing_time)
+        return publishing_time, timestamp
+
+    def get_project_categories(self, soup: BeautifulSoup) -> str or None:
+        project_categories_soup_list = soup.find_all("div", class_=["b-layout__txt",
+                                                                    "b-layout__txt_fontsize_11",
+                                                                    "b-layout__txt_padbot_20"])
+        if len(project_categories_soup_list) == 0:
+            project_categories = []
+        else:
+            project_categories_soup = project_categories_soup_list[-4]  # 9
+            project_categories = [i.text for i in project_categories_soup.find_all("a")]
+        return project_categories
 
 
 async def fl_parser_test():

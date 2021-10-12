@@ -1,7 +1,7 @@
 paths = {
     'html_examples_dir_path': 'html_pages',
-    'chat_id_list_file_path': 'json_dir\\chat_id_list.json',
-    'project_data_file_path': 'json_dir\\project_data.json'
+    'chat_id_list_file_path': 'parsing_freelance\\json_dir\\chat_id_list.json',
+    'project_data_file_path': 'project_data_dir\\project_data.json'
 }
 
 headers = {
