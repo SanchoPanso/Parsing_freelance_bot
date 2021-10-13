@@ -35,7 +35,7 @@ class Parser:
         """
         logging.info('Checking news started')
         # create dict that is a copy of data in project_data_file
-        project_dict_from_file = get_data_from_file(self.project_data_file_path)
+        project_dict_from_file = get_data_from_file('parsers\\project_data_dir\\project_data.json')
         # create empty list for found news
         news_list = []
         
