@@ -1,4 +1,5 @@
 import aiohttp
+from abc import ABC, abstractmethod
 from enum import Enum
 from json_io import get_data_from_file, write_data_into_file
 import time
@@ -14,7 +15,7 @@ class ParsingResult(Enum):
     NOT_IMPLEMENTED = 3
 
 
-class Parser:
+class Parser(ABC):
     """
     Abstract class for another parsers
     """
@@ -84,29 +85,31 @@ class Parser:
         self.project_dict = dict()
         return news_list, ParsingResult.SUCCESSFUL
 
+    @abstractmethod
     async def parse_single_page_with_projects(self, page_url, page_number) -> ParsingResult:
         """start parsing of single projects placed in the page"""
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     async def parse_single_project(self, project_url: str, project_mark: bool,
                                    session: aiohttp.ClientSession):
         """Take data from a single page with a project description."""
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def update_cond_for_cycle_ending(self):
         """
         Update conditional variable (end_point_is_not_reached) to define
         when the parsing cycle must be stoped
         """
-        raise NotImplementedError
 
+    @abstractmethod
     def is_valid_project(self, project_info: dict) -> bool:
         """check whether the project matches the required conditions"""
-        raise NotImplementedError
 
+    @abstractmethod
     def format_new(self, new: dict) -> str:
         """Format a new from dict info to one string in order to send this string to users"""
-        raise NotImplementedError
 
 
 

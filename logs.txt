@@ -18,3 +18,12 @@
 2021-10-13 00:12:33,730 - App.TelegramBot - INFO - Parsing successfully ended. Sending is starting
 2021-10-13 00:12:33,731 - App.TelegramBot - INFO - Number of the foung news: 1
 2021-10-13 00:12:33,837 - App.TelegramBot - INFO - Sending ended
+2021-10-17 01:48:01,912 - App - INFO - Program started
+2021-10-17 01:48:02,652 - App.TelegramBot - INFO - Checking is not active
+2021-10-17 01:48:15,902 - App.TelegramBot - INFO - Command '/check info' started in chat id 360558957
+2021-10-17 01:48:22,669 - App.TelegramBot - INFO - Checking is not active
+2021-10-17 01:48:29,506 - App.TelegramBot - INFO - Command '/check on' started in chat id 360558957
+2021-10-17 01:48:42,675 - App.TelegramBot - INFO - Checking is active, parsing started
+2021-10-17 01:48:55,507 - App.TelegramBot - INFO - Parsing successfully ended. Sending is starting
+2021-10-17 01:48:55,507 - App.TelegramBot - INFO - Number of the foung news: 1
+2021-10-17 01:48:55,939 - App.TelegramBot - INFO - Sending ended
