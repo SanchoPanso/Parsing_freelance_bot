@@ -1,11 +1,10 @@
 from aiogram import Bot
 from aiogram.types import BotCommand
 import asyncio
-from telegram_bot import bot, dp
-from telegram_bot import start, check_on, check_off, check_info, check
-import logging
-import sys
-import logger
+from src.telegram_bot import bot, dp
+from src.telegram_bot import start, check_on, check_off, check_info, check
+from src import logger
+from memory_profiler import memory_usage
 
 logger = logger.get_logger("App")
 
@@ -21,6 +20,7 @@ async def set_commands(bot: Bot):
 
 
 async def main():
+    memory_usage()
 
     dp.register_message_handler(start, commands='start')
     dp.register_message_handler(check_on, commands='check_on')
